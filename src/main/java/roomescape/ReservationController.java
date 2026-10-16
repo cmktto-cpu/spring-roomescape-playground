@@ -29,6 +29,13 @@ public class ReservationController {
     public ResponseEntity<Reservation> createReservation(
             @RequestBody ReservationRequest request) {
 
+        // 필수 입력값 검사
+        if (isBlank(request.name())
+                || isBlank(request.date())
+                || isBlank(request.time())) {
+            return ResponseEntity.badRequest().build();
+        }
+
         Reservation reservation = new Reservation(
                 nextId++,
                 request.name(),
@@ -47,9 +54,19 @@ public class ReservationController {
     public ResponseEntity<Void> deleteReservation(
             @PathVariable Long id) {
 
-        reservations.removeIf(r -> r.id().equals(id));
+        boolean removed = reservations.removeIf(
+                r -> r.id().equals(id)
+        );
+
+        if (!removed) {
+            return ResponseEntity.notFound().build();
+        }
 
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     public record ReservationRequest(

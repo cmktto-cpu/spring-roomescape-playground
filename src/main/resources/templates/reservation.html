@@ -1,69 +1,134 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>방탈출 어드민 페이지</title>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-  <link rel="stylesheet" href="/css/styles.css">
-  <link rel="stylesheet" href="/css/reservation.css">
+  <title>예약 관리</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+    }
+    th { background: #f5f5f5; }
+    button {
+      padding: 8px 15px;
+      cursor: pointer;
+    }
+    form {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
 </head>
-
 <body>
+<h1>예약 관리</h1>
 
-<div class="container-fluid page">
-  <div class="row">
-    <!-- Sidebar -->
-    <div id="sidebar-container" class="col-md-3">
-      <nav id="sidebar" class="text-white">
-        <!-- 로고 영역 -->
-        <div class="sidebar-logo p-4">
-          <a href="/">
-            <img src="https://avatars.githubusercontent.com/u/141792611?s=96&v=4" alt="logo"
-                 class="img-fluid rounded-circle">
-          </a>
-        </div>
-        <ul class="list-unstyled mt-4">
-          <li class="p-3">
-            <i class="fas fa-calendar-check menu-icon mr-2"></i>
-            <a href="/reservation" class="text-white">예약관리</a>
-          </li>
-          <li class="p-3">
-            <i class="fas fa-clock menu-icon mr-2"></i>
-            <a href="/time" class="text-white">시간관리</a>
-          </li>
-        </ul>
-      </nav>
-    </div>
-    <!-- Content -->
-    <div id="content-container" class="col-md-9 p-5">
-      <h1>예약 관리</h1>
-      <div class="table-header">
-        <button id="add-reservation" class="btn btn-primary">예약 추가</button>
-      </div>
-      <div class="table-container"/>
-      <table class="table table-bordered">
-        <thead>
-        <tr>
-          <th>예약번호</th>
-          <th>예약자</th>
-          <th>날짜</th>
-          <th>시간</th>
-          <th></th>
-        </tr>
-        </thead>
-        <tbody id="reservation-table-body">
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
+<h3>예약 추가</h3>
+<form id="reservation-form">
+  <input type="text" id="name"
+         placeholder="예약자" required>
+  <input type="date" id="date" required>
+  <input type="time" id="time" required>
+  <button type="submit">예약 추가</button>
+</form>
 
-<script src="/js/scripts.js"></script>
-<script src="/js/reservation.js"></script>
+<table>
+  <thead>
+  <tr>
+    <th>예약번호</th>
+    <th>예약자</th>
+    <th>날짜</th>
+    <th>시간</th>
+    <th>관리</th>
+  </tr>
+  </thead>
+  <tbody id="reservation-list"></tbody>
+</table>
+
+<script>
+  async function loadReservations() {
+    const response = await fetch('/reservations');
+    if (!response.ok) {
+      throw new Error('예약 조회 실패');
+    }
+
+    const reservations = await response.json();
+    const tbody = document.getElementById('reservation-list');
+    tbody.replaceChildren();
+
+    reservations.forEach(reservation => {
+      const tr = document.createElement('tr');
+
+      [
+        reservation.id,
+        reservation.name,
+        reservation.date,
+        reservation.time
+      ].forEach(value => {
+        const td = document.createElement('td');
+        td.textContent = value;
+        tr.appendChild(td);
+      });
+
+      const td = document.createElement('td');
+      const button = document.createElement('button');
+      button.textContent = '삭제';
+
+      button.onclick = async () => {
+        const result = await fetch(
+                `/reservations/${reservation.id}`,
+                { method: 'DELETE' }
+        );
+
+        if (result.ok) {
+          await loadReservations();
+        } else {
+          alert('예약 삭제 실패');
+        }
+      };
+
+      td.appendChild(button);
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('reservation-form')
+          .addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const reservation = {
+              name: document.getElementById('name').value,
+              date: document.getElementById('date').value,
+              time: document.getElementById('time').value
+            };
+
+            const response = await fetch('/reservations', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(reservation)
+            });
+
+            if (response.status === 201) {
+              event.target.reset();
+              await loadReservations();
+            } else {
+              alert('예약 추가 실패');
+            }
+          });
+
+  loadReservations();
+</script>
 </body>
-
 </html>

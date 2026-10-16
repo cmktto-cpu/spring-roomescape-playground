@@ -1,13 +1,18 @@
 package roomescape;
 
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
 public class ReservationController {
+
+    private final List<Reservation> reservations = new ArrayList<>();
+    private long nextId = 1L;
 
     @GetMapping("/reservation")
     public String reservationPage() {
@@ -17,18 +22,46 @@ public class ReservationController {
     @GetMapping("/reservations")
     @ResponseBody
     public List<Reservation> getReservations() {
-        return List.of(
-                new Reservation(1L, "브라운", "2023-01-01", "10:00"),
-                new Reservation(2L, "브라운", "2023-01-02", "11:00"),
-                new Reservation(3L, "브라운", "2023-01-03", "12:00")
-        );
+        return reservations;
     }
+
+    @PostMapping("/reservations")
+    public ResponseEntity<Reservation> createReservation(
+            @RequestBody ReservationRequest request) {
+
+        Reservation reservation = new Reservation(
+                nextId++,
+                request.name(),
+                request.date(),
+                request.time()
+        );
+
+        reservations.add(reservation);
+
+        return ResponseEntity
+                .created(URI.create("/reservations/" + reservation.id()))
+                .body(reservation);
+    }
+
+    @DeleteMapping("/reservations/{id}")
+    public ResponseEntity<Void> deleteReservation(
+            @PathVariable Long id) {
+
+        reservations.removeIf(r -> r.id().equals(id));
+
+        return ResponseEntity.noContent().build();
+    }
+
+    public record ReservationRequest(
+            String name,
+            String date,
+            String time
+    ) {}
 
     public record Reservation(
             Long id,
             String name,
             String date,
             String time
-    ) {
-    }
+    ) {}
 }
